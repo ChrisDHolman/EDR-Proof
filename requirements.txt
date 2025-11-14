@@ -1,0 +1,82 @@
+# Python Dependencies for CDR Validation Pipeline
+
+# Azure SDKs
+azure-identity==1.15.0
+azure-mgmt-compute==30.5.0
+azure-mgmt-network==25.2.0
+azure-mgmt-storage==21.1.0
+azure-mgmt-resource==23.0.1
+azure-storage-blob==12.19.0
+azure-keyvault-secrets==4.7.0
+
+# Database
+pyodbc==5.0.1
+pymssql==2.2.11
+
+# API Clients
+requests==2.31.0
+urllib3==2.1.0
+
+# EDR/AV Integrations
+# (Note: Some may require vendor-specific SDKs)
+falconpy==1.4.0  # CrowdStrike Falcon SDK
+# sentinelone-sdk - install via pip install git+https://github.com/SentinelOne/...
+# sophos-central-api-connector
+
+# Configuration and Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
+click==8.1.7
+colorama==0.4.6
+
+# Logging and Monitoring
+python-json-logger==2.0.7
+opencensus-ext-azure==1.1.13
+
+# File Processing
+python-magic==0.4.27
+hashlib-additional==1.0.0
+
+# User Simulation (for file interaction)
+pyautogui==0.9.54
+pywinauto==0.6.8  # Windows automation
+pynput==1.7.6
+
+# Scheduling and Task Management
+APScheduler==3.10.4
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+responses==0.24.1
+
+# Code Quality
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+
+# Wazuh API Client
+wazuh-api==4.7.0
+
+# Data Processing and Analysis
+pandas==2.1.4
+numpy==1.26.3
+
+# Retry and Error Handling
+tenacity==8.2.3
+backoff==2.2.1
+
+# HTTP Server (for webhooks/callbacks)
+flask==3.0.0
+gunicorn==21.2.0
+
+# Cryptography
+cryptography==41.0.7
+
+# Date/Time utilities
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Environment
+python-environ==0.4.54

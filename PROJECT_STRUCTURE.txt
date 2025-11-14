@@ -1,0 +1,221 @@
+CDR VALIDATION PIPELINE - PROJECT STRUCTURE
+============================================
+
+edr-proof/
+│
+├── START_HERE.md                    ← BEGIN HERE! Quick overview
+├── QUICKSTART_COMMANDS.md           ← Copy-paste commands to get running
+├── GETTING_STARTED.md               ← Detailed setup guide
+├── IMPLEMENTATION_STATUS.md         ← Technical details of what's built
+├── README.md                        ← Project architecture overview
+├── QUICKSTART.md                    ← Original quick start (legacy)
+│
+├── requirements.txt                 ← Python dependencies
+├── .env                            ← Environment variables (create this)
+├── .gitignore
+│
+├── infrastructure/                  ← Azure infrastructure as code
+│   ├── terraform/
+│   │   ├── main.tf                 ← Core resources
+│   │   ├── network.tf              ← VNet, NSGs, subnets
+│   │   ├── wazuh.tf                ← Wazuh VMs
+│   │   ├── database.tf             ← Azure SQL
+│   │   ├── variables.tf            ← Input variables
+│   │   ├── outputs.tf              ← Exported values
+│   │   └── terraform.tfvars.example ← Template (copy to terraform.tfvars)
+│   │
+│   └── scripts/
+│       ├── wazuh-manager-init.sh   ← Wazuh Manager bootstrap
+│       └── wazuh-indexer-init.sh   ← Wazuh Indexer bootstrap
+│
+├── src/                             ← Source code
+│   │
+│   ├── integrations/                ← External API integrations
+│   │   │
+│   │   ├── edr/                    ← EDR integrations
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py             ← Base EDRClient + EDRAlert classes
+│   │   │   ├── crowdstrike.py      ← CrowdStrike Falcon client
+│   │   │   ├── sentinelone.py      ← SentinelOne client
+│   │   │   └── sophos.py           ← Sophos Central client
+│   │   │
+│   │   ├── av/                     ← AV scanner integrations
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py             ← Base AVScanner + AVScanResult
+│   │   │   ├── defender.py         ← Windows Defender (PowerShell)
+│   │   │   ├── clamav.py           ← ClamAV (CLI)
+│   │   │   └── virustotal.py       ← VirusTotal API
+│   │   │
+│   │   ├── cdr/                    ← CDR integration
+│   │   │   ├── __init__.py
+│   │   │   └── glasswall.py        ← Glasswall CDR API client
+│   │   │
+│   │   └── siem/                   ← SIEM integration
+│   │       ├── __init__.py
+│   │       └── wazuh.py            ← Wazuh SIEM client
+│   │
+│   ├── file_interaction/            ← File execution & user simulation
+│   │   ├── __init__.py
+│   │   ├── executor.py             ← Smart file executor (by type)
+│   │   └── user_simulator.py       ← Mouse/keyboard simulation
+│   │
+│   ├── orchestrator/                ← Pipeline orchestration
+│   │   ├── __init__.py
+│   │   ├── vm_manager.py           ← Azure VM lifecycle management
+│   │   └── pipeline.py             ← Main test orchestrator
+│   │
+│   ├── metrics/                     ← Metrics & database
+│   │   └── sql_schema.sql          ← Database schema
+│   │
+│   └── utils/                       ← Utility modules
+│       ├── config.py               ← Configuration management
+│       ├── logger.py               ← Structured logging
+│       └── helpers.py              ← Helper functions
+│
+├── scripts/                         ← Executable scripts
+│   ├── test_connections.py         ← Test all API connections
+│   └── run_test.py                 ← Run CDR validation test (CLI)
+│
+├── samples/                         ← Test files (create this)
+│   └── test.pdf                    ← Sample test file
+│
+├── pipelines/                       ← CI/CD pipelines
+│   └── azure-pipelines.yml         ← Azure DevOps pipeline (TODO)
+│
+├── tests/                           ← Unit tests (TODO)
+│   ├── test_edr.py
+│   ├── test_av.py
+│   └── test_pipeline.py
+│
+├── docs/                            ← Additional documentation
+│   ├── architecture.md
+│   ├── setup-guide.md
+│   └── api-documentation.md
+│
+└── logs/                            ← Application logs (auto-created)
+    └── cdr-pipeline.log
+
+
+KEY FILES TO UNDERSTAND
+=======================
+
+Configuration & Setup:
+- START_HERE.md              → Read this first
+- QUICKSTART_COMMANDS.md     → Commands to run
+- terraform.tfvars           → Your Azure config (create from .example)
+- .env                       → Your secrets (create this)
+
+Core Pipeline Code:
+- src/orchestrator/pipeline.py      → Main orchestration logic
+- src/orchestrator/vm_manager.py    → VM lifecycle management
+- src/integrations/edr/base.py      → EDR interface definition
+- src/integrations/siem/wazuh.py    → Alert collection from Wazuh
+
+Running Tests:
+- scripts/test_connections.py       → Verify setup
+- scripts/run_test.py               → Run full pipeline
+
+
+WHAT EACH MODULE DOES
+======================
+
+EDR Integrations (src/integrations/edr/):
+- Connects to CrowdStrike, SentinelOne, Sophos APIs
+- Retrieves alerts from EDR consoles
+- Standardizes alert format across vendors
+- Provides agent deployment hooks
+
+AV Scanners (src/integrations/av/):
+- Scans files with Defender, ClamAV, VirusTotal
+- Returns malicious/clean verdict
+- Standardized result format
+
+CDR Integration (src/integrations/cdr/):
+- Sends files to Glasswall for sanitization
+- Tracks before/after metrics
+- Returns sanitized file
+
+Wazuh SIEM (src/integrations/siem/):
+- Collects alerts from all EDR agents
+- Single source of truth for security events
+- Time-based alert queries
+
+File Interaction (src/file_interaction/):
+- Executes files based on type (EXE, PDF, Office docs)
+- Simulates user behavior (mouse, keyboard)
+- Triggers EDR behavioral analysis
+
+VM Manager (src/orchestrator/vm_manager.py):
+- Provisions Azure VMs (Spot instances)
+- Creates snapshots
+- Executes remote commands
+- Cleans up resources
+
+Pipeline Orchestrator (src/orchestrator/pipeline.py):
+- Coordinates entire test workflow
+- Runs pre-CDR and post-CDR phases
+- Compares results
+- Calculates ROI metrics
+
+
+WORKFLOW SUMMARY
+================
+
+1. User runs: python scripts/run_test.py --file suspicious.pdf
+
+2. Pipeline orchestrator:
+   ├─ Phase 1: Pre-CDR Testing
+   │  ├─ Provision VM
+   │  ├─ Deploy EDR agents (CrowdStrike, SentinelOne, Sophos)
+   │  ├─ Copy file to VM
+   │  ├─ Execute file with user simulation
+   │  ├─ Wait for alerts
+   │  ├─ Collect alerts from Wazuh SIEM
+   │  ├─ Query individual EDR consoles
+   │  ├─ Run AV scans
+   │  └─ Cleanup VM
+   │
+   ├─ Phase 2: CDR Processing
+   │  ├─ Send file to Glasswall
+   │  ├─ Receive sanitized file
+   │  └─ Track metrics
+   │
+   ├─ Phase 3: Post-CDR Testing
+   │  └─ Repeat Phase 1 with sanitized file
+   │
+   └─ Phase 4: Results Analysis
+      ├─ Compare alert counts
+      ├─ Calculate reduction percentages
+      └─ Generate ROI report
+
+3. Output:
+   - Console: Pretty-printed results
+   - JSON file: Detailed metrics
+   - SQL database: Historical data
+
+
+NEXT STEPS TO GET RUNNING
+==========================
+
+1. Read START_HERE.md
+2. Deploy infrastructure: cd infrastructure/terraform && terraform apply
+3. Configure secrets: See QUICKSTART_COMMANDS.md
+4. Install Python deps: pip install -r requirements.txt
+5. Test connections: python scripts/test_connections.py
+6. Run first test: python scripts/run_test.py --file samples/test.pdf
+
+
+SUPPORT
+=======
+
+Documentation:
+- START_HERE.md              → Quick overview
+- GETTING_STARTED.md         → Detailed setup
+- IMPLEMENTATION_STATUS.md   → Technical details
+
+Commands:
+- QUICKSTART_COMMANDS.md     → All commands in one place
+
+Code:
+- src/*/*.py                 → Well-documented source code
+- Each module has docstrings explaining functionality

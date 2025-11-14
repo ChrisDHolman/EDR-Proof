@@ -1,0 +1,66 @@
+# Example Terraform Variables File
+# Copy this file to terraform.tfvars and fill in your values
+
+# Basic Configuration
+environment         = "prod"
+location            = "eastus"
+resource_group_name = "rg-cdr-validation"
+
+# Wazuh Admin Credentials
+wazuh_admin_username = "wazuhadmin"
+wazuh_admin_password = "CHANGE_ME_STRONG_PASSWORD_HERE" # Must be complex
+
+# SQL Database Credentials
+sql_admin_username = "sqladmin"
+sql_admin_password = "CHANGE_ME_STRONG_PASSWORD_HERE" # Must be complex
+
+# Storage Account (must be globally unique, lowercase, no special characters)
+storage_account_name = "stcdrvalidation"
+
+# Key Vault (must be globally unique)
+key_vault_name = "kv-cdr-validation"
+
+# SQL Server (must be globally unique)
+sql_server_name = "sql-cdr-validation"
+
+# API Credentials (get these from your vendors)
+crowdstrike_client_id     = "YOUR_CROWDSTRIKE_CLIENT_ID"
+crowdstrike_client_secret = "YOUR_CROWDSTRIKE_CLIENT_SECRET"
+sentinelone_api_token     = "YOUR_SENTINELONE_API_TOKEN"
+sophos_api_key            = "YOUR_SOPHOS_API_KEY"
+glasswall_api_key         = "YOUR_GLASSWALL_API_KEY"
+glasswall_api_url         = "https://api.glasswall.com/v1"
+commercial_av_api_key     = "YOUR_VIRUSTOTAL_OR_OTHER_AV_API_KEY"
+
+# DevOps Configuration
+devops_service_principal_object_id = "YOUR_AZURE_DEVOPS_SERVICE_PRINCIPAL_OBJECT_ID"
+
+# Network Security (IMPORTANT: Change this to your office/VPN IP)
+allowed_ip_ranges = [
+  "0.0.0.0/0" # CHANGE THIS! Use your actual IP: "1.2.3.4/32"
+]
+
+# Cost Optimization
+enable_spot_instances = true
+spot_max_price        = -1 # -1 means pay up to pay-as-you-go price
+auto_shutdown_time    = "1900" # 7 PM
+
+# Monitoring
+log_retention_days = 30
+
+# VM Sizes (adjust based on your budget)
+wazuh_manager_vm_size  = "Standard_D4s_v3"  # 4 vCPU, 16 GB RAM
+wazuh_indexer_vm_size  = "Standard_D8s_v3"  # 8 vCPU, 32 GB RAM
+test_vm_size           = "Standard_D4s_v3"  # 4 vCPU, 16 GB RAM
+
+# Database SKU
+sql_sku = "S1" # Standard tier
+
+# Tags
+project_tags = {
+  Project     = "CDR-Validation"
+  ManagedBy   = "Terraform"
+  CostCenter  = "Security"
+  Environment = "Production"
+  Owner       = "YourName"
+}

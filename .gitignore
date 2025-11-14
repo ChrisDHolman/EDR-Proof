@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+crash.log
+
+# Secrets and Configuration
+.env
+.env.local
+*.pem
+*.key
+secrets/
+credentials/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+results_*.json
+test_results/
+samples/*.exe
+samples/*.dll
+samples/*.msi
+
+# Azure
+.azure/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
