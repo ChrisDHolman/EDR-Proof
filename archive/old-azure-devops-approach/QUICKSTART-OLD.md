@@ -1,8 +1,15 @@
-# Quick Start Guide - CDR Validation Pipeline
+# Quick Start Guide - CDR Validation Pipeline (HYBRID SYSTEM)
 
 ## What You Have Now
 
-A complete DevOps automation pipeline for validating CDR (Content Disarm and Reconstruction) effectiveness across multiple EDR and AV solutions.
+A **modern hybrid automation system** (FastAPI + Celery) that replaces Azure DevOps Pipelines for validating CDR (Content Disarm and Reconstruction) effectiveness across multiple EDR and AV solutions.
+
+### Why Hybrid?
+- **Faster**: Parallel processing with Celery workers
+- **Flexible**: Run locally or in containers
+- **Real-time**: Live web dashboard showing progress
+- **Scalable**: VM pool for Phase 3 (EDR testing)
+- **No vendor lock-in**: Works on any cloud or on-premise
 
 ## Project Status
 

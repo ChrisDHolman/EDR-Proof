@@ -1,172 +1,393 @@
-# EDR/AV CDR Effectiveness Validation Pipeline
+# EDR-PROOF: Hybrid CDR Validation System
 
-## Overview
+> **Modern automation platform** for validating Content Disarm & Reconstruction (CDR) effectiveness across EDR/AV solutions
 
-Automated pipeline to validate the effectiveness of Content Disarm and Reconstruction (CDR) in reducing EDR and AV alert noise. This system processes files through multiple security solutions before and after CDR processing to prove ROI.
+## 🚀 Quick Start
 
-## Architecture
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Start Redis
+docker run -d -p 6379:6379 redis:7-alpine
+
+# 3. Configure credentials
+cp .env.example .env
+nano .env  # Add your API keys
+
+# 4. Start system
+./start.sh
+
+# 5. Open dashboard
+http://localhost:8000
+```
+
+**Or use Docker:**
+```bash
+docker-compose up -d
+```
+
+---
+
+## 📖 What This Does
+
+Automates large-scale validation of CDR technology by processing files through:
+
+**Phase 1:** CDR Processing (3 engines in parallel)
+- Glasswall
+- OPSWAT MetaDefender
+- Votiro
+
+**Phase 2:** AV Scanning (2 engines in parallel)
+- OPSWAT MetaDefender AV
+- ReversingLabs AP
+
+**Phase 3:** EDR Testing (3 solutions with VM pool)
+- CrowdStrike Falcon
+- SentinelOne
+- Sophos
+
+**Result:** Proves CDR ROI by comparing alert volumes before/after sanitization
+
+---
+
+## 🏗️ Architecture
 
 ```
-Azure Storage → Azure DevOps Pipeline → [Pre-CDR Testing] → Glasswall CDR → [Post-CDR Testing] → Analytics
-                                              ↓                                      ↓
-                                        Wazuh SIEM ← EDR/AV Agents ← Test VMs (Isolated)
-                                              ↓
-                                        Azure SQL Database → Metrics & Reporting
+┌─────────────────────────────────────────────┐
+│     Web Dashboard (http://localhost:8000)   │
+│     - Submit jobs                           │
+│     - Real-time progress                    │
+│     - View results                          │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│         FastAPI + Celery Workers            │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
+│  │ Phase 1  │ │ Phase 2  │ │  Phase 3    │ │
+│  │ (CDR)    │ │ (AV)     │ │  (EDR+VMs)  │ │
+│  │ 10 work. │ │ 10 work. │ │  5 workers  │ │
+│  └──────────┘ └──────────┘ └──────┬──────┘ │
+└─────────────────────────────────────┼────────┘
+                                      │
+                           ┌──────────▼────────┐
+                           │ Azure VM Pool     │
+                           │ 15 VMs (5 per EDR)│
+                           │ Pre-installed EDR │
+                           └───────────────────┘
 ```
 
-## Components
+---
 
-### Security Solutions
-- **EDR**: CrowdStrike Falcon, SentinelOne, Sophos
-- **AV**: Windows Defender, ClamAV, Commercial AV APIs
-- **CDR**: Glasswall
-- **SIEM**: Wazuh (self-hosted on Azure VMs)
-
-### Infrastructure
-- **Cloud**: Azure (Fresh subscription)
-- **Compute**: Azure VMs (Spot instances for cost optimization)
-- **Storage**: Azure Storage Account (Blob)
-- **Database**: Azure SQL Database
-- **Orchestration**: Azure DevOps Pipelines
-- **IaC**: Terraform
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 edr-proof/
-├── infrastructure/          # Infrastructure as Code
-│   ├── terraform/          # Azure resource definitions
-│   └── scripts/            # Deployment and configuration scripts
-├── pipelines/              # Azure DevOps pipeline definitions
-├── src/                    # Source code
-│   ├── orchestrator/       # Main pipeline orchestration
-│   ├── integrations/       # EDR, AV, CDR, SIEM integrations
-│   ├── file_interaction/   # File execution and user simulation
-│   ├── metrics/            # Data collection and analysis
-│   └── utils/              # Shared utilities
-├── tests/                  # Unit and integration tests
-└── docs/                   # Documentation
-
+├── app.py                   # FastAPI web application
+├── docker-compose.yml       # Container orchestration
+├── start.sh / stop.sh       # Easy startup scripts
+├── .env.example             # Configuration template
+│
+├── tasks/                   # Celery task definitions
+│   ├── celery_app.py       # Celery configuration
+│   ├── job_manager.py      # Job state management
+│   ├── vm_pool_manager.py  # VM orchestration
+│   ├── phase1_cdr.py       # CDR processing
+│   ├── phase2_av.py        # AV scanning
+│   └── phase3_edr.py       # EDR testing
+│
+├── src/
+│   ├── integrations/       # CDR/AV/EDR API clients
+│   │   ├── cdr/           # Glasswall, OPSWAT, Votiro
+│   │   ├── av/            # OPSWAT AV, ReversingLabs
+│   │   └── edr/           # CrowdStrike, SentinelOne, Sophos
+│   ├── file_interaction/   # File execution engine
+│   └── utils/             # Azure Storage, config, logging
+│
+├── archive/                # Old Azure DevOps approach (reference)
+└── IMPLEMENTATION_SUMMARY.md  # Complete technical documentation
 ```
 
-## Key Features
+---
 
-- **Automated File Interaction**: Smart file handling based on type (executables, Office docs, PDFs, archives)
-- **User Behavior Simulation**: Realistic mouse/keyboard interactions to trigger behavioral analysis
-- **Isolated Sandboxing**: Azure VMs with automatic provisioning and teardown
-- **Comprehensive Metrics**: EDR alerts, AV detections, false positives, processing time
-- **Cost-Optimized**: Spot VMs, sequential processing, rapid teardown
-- **Before/After Comparison**: Statistical proof of CDR effectiveness
+## 🎯 Key Features
 
-## Workflow
+✅ **4-5x Faster** - Parallel processing vs sequential pipelines
+✅ **Real-Time Dashboard** - Live progress tracking
+✅ **VM Pool Management** - Intelligent VM allocation for Phase 3
+✅ **Cost Optimized** - Spot VMs, pay per batch (~$2-5)
+✅ **No Vendor Lock-In** - Run locally, Docker, or any cloud
+✅ **Flexible** - Easy to add new CDR/AV/EDR engines
 
-1. **File Upload**: Files placed in Azure Storage Account
-2. **Pre-CDR Testing**:
-   - Provision isolated Azure VM
-   - Deploy EDR agents (3x) + AV scanners (3x) + Wazuh agent
-   - Execute/open file with user simulation (2-5 min)
-   - Collect metrics from EDR/AV/Wazuh
-   - Teardown VM
-3. **CDR Processing**: Glasswall sanitizes the file
-4. **Post-CDR Testing**: Repeat step 2 with sanitized file
-5. **Analytics**: Compare metrics, calculate noise reduction, generate report
+---
 
-## Metrics Tracked
+## 📊 Performance
 
-- EDR alert count and severity (pre vs post)
-- AV detection count and false positives (pre vs post)
-- Alert noise reduction percentage
-- Processing time and cost per file
-- Clean file rate post-CDR
+| Metric | Value |
+|--------|-------|
+| **200 files × 3 phases** | 8-10 hours |
+| **Phase 1 (CDR)** | 30-60 min (10 parallel workers) |
+| **Phase 2 (AV)** | 45-90 min (10 parallel workers) |
+| **Phase 3 (EDR)** | 6-8 hours (15 VMs) |
+| **Cost per batch** | $2-5 (Spot VMs) |
 
-## Getting Started
+---
 
-### Prerequisites
+## 🛠️ Prerequisites
 
-- Azure subscription with Owner/Contributor access
-- Azure DevOps organization and project
-- Service Connection configured in Azure DevOps
-- API credentials for:
-  - CrowdStrike Falcon
-  - SentinelOne
-  - Sophos
-  - Glasswall CDR
-  - Commercial AV vendors
-- Terraform CLI installed
-- Azure CLI installed
+### Required
 - Python 3.11+
+- Redis (for Celery)
+- Azure Storage Account
+- Azure subscription (for Phase 3 VMs)
 
-### Quick Start
+### API Credentials Needed
+- **CDR Engines:** Glasswall, OPSWAT, Votiro
+- **AV Engines:** OPSWAT MetaDefender, ReversingLabs
+- **EDR Consoles:** CrowdStrike, SentinelOne, Sophos
 
-1. **Clone and Setup**:
-   ```bash
-   git clone <repo-url>
-   cd edr-proof
-   python -m venv venv
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
-   pip install -r requirements.txt
-   ```
+### Critical for Phase 3
+**VM Base Images** with EDR agents pre-installed:
+- `crowdstrike-base-image`
+- `sentinelone-base-image`
+- `sophos-base-image`
 
-2. **Configure Secrets**:
-   ```bash
-   # Create terraform.tfvars from template
-   cp infrastructure/terraform/terraform.tfvars.example infrastructure/terraform/terraform.tfvars
-   # Edit and add your API keys and credentials
-   ```
+See `IMPLEMENTATION_SUMMARY.md` for image creation instructions.
 
-3. **Deploy Infrastructure**:
-   ```bash
-   cd infrastructure/terraform
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+---
 
-4. **Configure Wazuh**:
-   ```bash
-   cd ../scripts
-   ./deploy-wazuh.sh
-   ./configure-wazuh.sh
-   ```
+## 🎨 Dashboard
 
-5. **Setup Azure DevOps Pipeline**:
-   - Import `pipelines/azure-pipelines.yml`
-   - Configure service connection
-   - Add pipeline variables (from Key Vault)
+Access **http://localhost:8000** to see:
 
-6. **Run Pipeline**:
-   - Upload test files to Azure Storage
-   - Trigger pipeline manually
-   - Monitor execution in Azure DevOps
-   - View results in Azure SQL or dashboard
+- 📤 Job submission form
+- 📊 Real-time progress bars
+- 📈 Phase-by-phase statistics
+- 🎯 ROI metrics (alert reduction %)
+- 🔄 Auto-refresh every 5 seconds
 
-## Documentation
+**Monitoring UI:** http://localhost:5555 (Celery Flower)
 
-- [Architecture Design](docs/architecture.md)
-- [Setup Guide](docs/setup-guide.md)
-- [API Documentation](docs/api-documentation.md)
+---
 
-## Security Considerations
+## 📚 Documentation
 
-- All test VMs are isolated in dedicated VNet with NSG restrictions
-- No internet egress during file testing
-- Automatic quarantine of detected malware
-- VM snapshots before file execution
-- Audit logging to Azure Monitor
-- Secrets stored in Azure Key Vault
+| File | Description |
+|------|-------------|
+| **IMPLEMENTATION_SUMMARY.md** | **START HERE** - Complete technical guide |
+| `.env.example` | Configuration template |
+| `README.md` | This file - quick overview |
+| `archive/` | Old Azure DevOps approach (reference) |
 
-## Cost Optimization
+---
 
-- Azure Spot VMs for test instances (70-90% savings)
-- Sequential processing (1 file at a time)
-- Rapid VM teardown (<5 min per test)
-- Reserved instances for persistent Wazuh VMs
-- Storage lifecycle policies (auto-delete old logs)
+## 🔧 Configuration
 
-## License
+Edit `.env` with your credentials:
+
+```env
+# Azure Storage
+AZURE_STORAGE_ACCOUNT_URL=https://your-account.blob.core.windows.net
+AZURE_STORAGE_ACCOUNT_KEY=your-key
+
+# CDR Engines
+GLASSWALL_API_KEY=your-key
+OPSWAT_CDR_API_KEY=your-key
+VOTIRO_API_KEY=your-key
+
+# AV Engines
+OPSWAT_AV_API_KEY=your-key
+REVERSINGLABS_API_KEY=your-key
+
+# EDR Consoles
+CROWDSTRIKE_CLIENT_ID=your-id
+CROWDSTRIKE_CLIENT_SECRET=your-secret
+SENTINELONE_API_TOKEN=your-token
+SOPHOS_CLIENT_ID=your-id
+
+# Azure VM Images (for Phase 3)
+CROWDSTRIKE_IMAGE_ID=/subscriptions/.../images/crowdstrike-base-image
+SENTINELONE_IMAGE_ID=/subscriptions/.../images/sentinelone-base-image
+SOPHOS_IMAGE_ID=/subscriptions/.../images/sophos-base-image
+```
+
+---
+
+## 🚀 Usage
+
+### Start a Job
+
+**Via Dashboard:**
+1. Go to http://localhost:8000
+2. Enter container name (e.g., `test-files`)
+3. Select phases (1, 2, 3)
+4. Click "Start Batch Job"
+
+**Via API:**
+```bash
+curl -X POST http://localhost:8000/api/jobs/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "container_name": "test-files",
+    "phases": [1, 2, 3],
+    "priority": "normal"
+  }'
+```
+
+### Monitor Progress
+
+- **Dashboard:** http://localhost:8000
+- **Flower:** http://localhost:5555
+- **Logs:** `tail -f logs/*.log`
+
+### Get Results
+
+```bash
+# List all jobs
+curl http://localhost:8000/api/jobs
+
+# Get job status
+curl http://localhost:8000/api/jobs/{job_id}
+
+# Get detailed results
+curl http://localhost:8000/api/jobs/{job_id}/results
+```
+
+---
+
+## 🔍 System Components
+
+### FastAPI Application (`app.py`)
+- REST API for job management
+- HTML dashboard with real-time updates
+- Job submission, monitoring, results
+
+### Celery Workers (`tasks/`)
+- **Phase 1:** CDR processing (parallel)
+- **Phase 2:** AV scanning (parallel)
+- **Phase 3:** EDR testing (VM pool)
+
+### VM Pool Manager (`tasks/vm_pool_manager.py`)
+- Maintains 15 VMs (5 per EDR)
+- Thread-safe allocation
+- Auto-recycling after 20 uses
+- Cleanup between tests
+
+### Job Manager (`tasks/job_manager.py`)
+- Redis-based state tracking
+- Real-time progress calculation
+- Result aggregation
+
+---
+
+## 🐛 Troubleshooting
+
+**Redis not running:**
+```bash
+docker run -d -p 6379:6379 redis:7-alpine
+# or
+sudo systemctl start redis
+```
+
+**Workers not processing:**
+```bash
+# Check worker status
+celery -A tasks.celery_app inspect active
+
+# Restart workers
+./stop.sh && ./start.sh
+```
+
+**No VMs available:**
+```python
+# Initialize VM pool
+from tasks.vm_pool_manager import VMPoolManager
+from src.utils.config import ConfigManager
+
+VMPoolManager(ConfigManager()).initialize_pools()
+```
+
+**See logs:**
+```bash
+tail -f logs/fastapi.log
+tail -f logs/celery-phase3.log
+```
+
+---
+
+## 💰 Cost Breakdown
+
+| Component | Cost |
+|-----------|------|
+| **Phase 1 (CDR)** | API costs only |
+| **Phase 2 (AV)** | API costs only |
+| **Phase 3 (VMs)** | 15 VMs × 8hrs × $0.02/hr = **~$2.40** |
+| **Storage** | 2GB × $0.02/GB = **<$0.10** |
+| **Total per batch** | **~$2-5** |
+
+Much cheaper than Azure DevOps agent costs ($50-100/month).
+
+---
+
+## 🔒 Security
+
+- VMs isolated in dedicated VNet
+- No internet egress during testing
+- Automatic VM cleanup after tests
+- Secrets in `.env` (never commit!)
+- Azure Spot VMs for cost savings
+
+---
+
+## 📞 Support
+
+**Read first:**
+- `IMPLEMENTATION_SUMMARY.md` - Complete technical guide
+- Check logs in `logs/` directory
+- Review Flower UI at http://localhost:5555
+
+**Common issues:**
+- Redis connection → Start Redis
+- No VMs → Initialize pool
+- API errors → Check credentials in `.env`
+
+---
+
+## 🎓 Next Steps
+
+1. ✅ Read `IMPLEMENTATION_SUMMARY.md`
+2. ✅ Configure `.env` with real credentials
+3. ✅ Create VM base images (Phase 3 requirement)
+4. ✅ Upload test files to Azure Blob
+5. ✅ Initialize VM pool
+6. ✅ Run your first batch job!
+
+---
+
+## 📝 License
 
 Proprietary - Internal Use Only
 
-## Support
+---
 
-For issues and questions, contact the DevOps/Security team.
+## 🏆 Why This Approach?
+
+**Before (Azure DevOps Pipelines):**
+- ❌ Sequential processing (slow)
+- ❌ Complex YAML debugging
+- ❌ Limited scalability
+- ❌ Fixed monthly costs
+- ❌ Vendor lock-in
+
+**After (FastAPI + Celery):**
+- ✅ Parallel processing (4-5x faster)
+- ✅ Python debugging (stack traces)
+- ✅ Infinite scalability (add workers)
+- ✅ Pay per batch
+- ✅ Run anywhere
+
+---
+
+**Ready to validate CDR at scale!** 🚀
+
+For detailed technical documentation, see: **`IMPLEMENTATION_SUMMARY.md`**

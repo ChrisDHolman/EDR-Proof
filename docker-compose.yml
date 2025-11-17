@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # Redis - Message broker and result backend for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: edr-proof-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edr-proof-api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - AZURE_STORAGE_ACCOUNT_URL=${AZURE_STORAGE_ACCOUNT_URL}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    volumes:
+      - .:/app
+      - /tmp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker - Phase 1 (CDR Processing)
+  celery-phase1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edr-proof-celery-phase1
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - AZURE_STORAGE_ACCOUNT_URL=${AZURE_STORAGE_ACCOUNT_URL}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+    volumes:
+      - .:/app
+      - /tmp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A tasks.celery_app worker --queues=phase1 --concurrency=10 --loglevel=info --hostname=phase1@%h
+
+  # Celery Worker - Phase 2 (AV Scanning)
+  celery-phase2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edr-proof-celery-phase2
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - AZURE_STORAGE_ACCOUNT_URL=${AZURE_STORAGE_ACCOUNT_URL}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+    volumes:
+      - .:/app
+      - /tmp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A tasks.celery_app worker --queues=phase2 --concurrency=10 --loglevel=info --hostname=phase2@%h
+
+  # Celery Worker - Phase 3 (EDR Testing)
+  # Lower concurrency since VMs are limited
+  celery-phase3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edr-proof-celery-phase3
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - AZURE_STORAGE_ACCOUNT_URL=${AZURE_STORAGE_ACCOUNT_URL}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    volumes:
+      - .:/app
+      - /tmp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A tasks.celery_app worker --queues=phase3 --concurrency=5 --loglevel=info --hostname=phase3@%h
+
+  # Celery Flower - Monitoring UI
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edr-proof-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A tasks.celery_app flower --port=5555
+
+volumes:
+  redis_data:

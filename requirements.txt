@@ -1,5 +1,17 @@
 # Python Dependencies for CDR Validation Pipeline
 
+# Web Framework (NEW)
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+python-multipart==0.0.6
+
+# Celery & Task Queue (NEW)
+celery==5.3.6
+redis==5.0.1
+flower==2.0.1
+kombu==5.3.5
+
 # Azure SDKs
 azure-identity==1.15.0
 azure-mgmt-compute==30.5.0
@@ -16,6 +28,7 @@ pymssql==2.2.11
 # API Clients
 requests==2.31.0
 urllib3==2.1.0
+httpx==0.26.0
 
 # EDR/AV Integrations
 # (Note: Some may require vendor-specific SDKs)
